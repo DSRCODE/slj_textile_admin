@@ -1,0 +1,157 @@
+/* Full Page Layout */
+.login-full-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+/* Left Branding Section */
+.login-left {
+    width: 50%;
+    /* background: #00A63E; */
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 6vw;
+    animation: fadeInLeft 0.6s ease;
+}
+
+.login-logo {
+    width: 90px;
+    margin-bottom: 25px;
+    filter: brightness(1.1);
+}
+
+.login-main-title {
+    color: black !important;
+    font-size: 2.4rem;
+    margin-bottom: 15px;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.login-subtitle {
+    font-size: 17px;
+    line-height: 1.7;
+    color: black;
+    max-width: 480px;
+}
+
+/* Right Form Section */
+.login-right {
+    width: 55%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f8fafc;
+    padding: 0 5vw;
+    animation: fadeInRight 0.6s ease;
+}
+
+.login-form-wrapper {
+    width: 100%;
+    max-width: 500px;
+}
+
+.form-title {
+    font-size: 28px;
+    text-align: left;
+    margin-bottom: 8px;
+    color: #1e293b;
+}
+
+.form-tagline {
+    color: #64748b;
+    font-size: 16px;
+    margin-bottom: 30px;
+}
+
+.login-form {
+    width: 100%;
+}
+
+.form-item {
+    margin-bottom: 20px;
+}
+
+.login-btn {
+    margin-top: 10px;
+    border-radius: 6px;
+    font-weight: 500;
+    height: 45px;
+    background: linear-gradient(90deg, #009E60, #009E60);
+    transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+    background: linear-gradient(90deg, #2E8B57, #2E8B57);
+}
+
+.error {
+    color: #dc2626;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.forgot-link {
+    color: #2563eb !important;
+    margin-top: 5px;
+    font-size: 15px;
+}
+
+/* Animations */
+@keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-40px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(40px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+
+
+    .login-left {
+        display: none;
+    }
+
+    .login-right {
+        width: 100%;
+        padding: 40px 20px;
+        /* text-align: center; */
+    }
+
+    .login-form-wrapper {
+        max-width: 90%;
+    }
+
+    .login-main-title {
+        font-size: 2rem;
+    }
+
+    .login-subtitle {
+        max-width: 100%;
+        text-align: center;
+    }
+}
