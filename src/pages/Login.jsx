@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import { Input, Typography } from "antd";
 import { MailOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 
 const { Title, Paragraph } = Typography;
@@ -17,25 +19,32 @@ const LoginSchema = Yup.object().shape({
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { user, loading } = useAuth();
 
   const handleLogin = async (values, { setSubmitting }) => {
     try {
-      // MOCK LOGIN
-      await new Promise((r) => setTimeout(r, 800));
-
-      login({
-        token: "dummy.jwt.token",
-        user: { name: "SLJ Textile Admin", role: "ADMIN" },
-      });
-
-      toast.success("Login successful");
-      navigate("/");
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+    } catch (error) {
+      switch (error.code) {
+        case "auth/user-not-found":
+          toast.error("User not found");
+          break;
+        case "auth/wrong-password":
+          toast.error("Invalid credentials");
+          break;
+        default:
+          toast.error("Login failed");
+      }
     } finally {
       setSubmitting(false);
     }
   };
-
+  useEffect(() => {
+    if (!loading && user) {
+      toast.success("Login successful");
+      navigate("/", { replace: true });
+    }
+  }, [user, loading, navigate]);
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-[#f8fafc]">
       {/* LEFT BRAND SECTION */}

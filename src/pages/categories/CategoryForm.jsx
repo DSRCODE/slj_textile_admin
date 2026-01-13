@@ -1,17 +1,21 @@
-import React, { useEffect } from "react";
-import { Form, Input, Button, Upload, Switch, Card } from "antd";
-import { UploadOutlined, SaveOutlined } from "@ant-design/icons";
-import {
-  useAddCategoryMutation,
-  useUpdateCategoryMutation,
-} from "../../redux/api/categoryApi";
+import React, { useEffect, useState } from "react";
+import { Form, Input, Switch, Card } from "antd";
+import { SaveOutlined } from "@ant-design/icons";
 import { toast } from "react-toastify";
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  doc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db } from "../../firebase";
+import { CATEGORY_IMAGES } from "../../Utills/Utills";
 
 const CategoryForm = ({ editData, onClose }) => {
   const [form] = Form.useForm();
-  const [addCategory, { isLoading: isAdding }] = useAddCategoryMutation();
-  const [updateCategory, { isLoading: isUpdating }] =
-    useUpdateCategoryMutation();
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (editData) {
@@ -19,45 +23,43 @@ const CategoryForm = ({ editData, onClose }) => {
         name: editData.name,
         status: editData.status,
       });
+      setSelectedImage(editData.image);
     }
   }, [editData]);
 
   const onFinish = async (values) => {
+    if (!selectedImage) {
+      toast.error("Please select a category image");
+      return;
+    }
+
     try {
-      const formData = new FormData();
+      setLoading(true);
 
-      formData.append("name", values.name);
-      if (typeof values.status === "boolean") {
-        formData.append("status", values.status);
-      }
-
-      if (values.image && values.image.length > 0) {
-        formData.append("image", values.image[0].originFileObj);
-      }
+      const payload = {
+        name: values.name,
+        image: selectedImage,
+        status: true,
+        ...(editData ? {} : { createdAt: serverTimestamp() }),
+      };
 
       if (editData) {
-        await updateCategory({
-          id: editData._id,
-          formData,
-        }).unwrap();
+        await updateDoc(doc(db, "categories", editData.id), payload);
         toast.success("Category updated successfully");
       } else {
-        await addCategory(formData).unwrap();
+        await addDoc(collection(db, "categories"), payload);
         toast.success("Category added successfully");
         form.resetFields();
+        setSelectedImage(null);
       }
 
       onClose?.();
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       toast.error("Operation failed");
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const normFile = (e) => {
-    if (Array.isArray(e)) {
-      return e;
-    }
-    return e?.fileList;
   };
 
   return (
@@ -65,6 +67,7 @@ const CategoryForm = ({ editData, onClose }) => {
       <h5 className="text-lg font-semibold mb-4">
         {editData ? "Edit Category" : "Add Category"}
       </h5>
+
       <Form layout="vertical" form={form} onFinish={onFinish}>
         <Form.Item
           label="Category Name"
@@ -74,33 +77,38 @@ const CategoryForm = ({ editData, onClose }) => {
           <Input placeholder="Enter category name" />
         </Form.Item>
 
-        <Form.Item
-          label="Category Image"
-          name="image"
-          valuePropName="fileList"
-          getValueFromEvent={normFile}
-          rules={
-            !editData ? [{ required: true, message: "Image is required" }] : []
-          }
-        >
-          <Upload beforeUpload={() => false} maxCount={1}>
-            <Button icon={<UploadOutlined />}>Upload Image</Button>
-          </Upload>
+        {/* IMAGE SELECTION */}
+        <Form.Item label="Select Category Image" required>
+          <div className="grid grid-cols-4 gap-3">
+            {CATEGORY_IMAGES.map((img) => (
+              <Card
+                key={img.id}
+                hoverable
+                onClick={() => setSelectedImage(img.url)}
+                className={`border-2 ${
+                  selectedImage === img.url
+                    ? "border-yellow-500"
+                    : "border-transparent"
+                }`}
+                bodyStyle={{ padding: 6 }}
+              >
+                <img
+                  src={img.url}
+                  alt="category"
+                  className="h-20 w-full object-cover rounded"
+                />
+              </Card>
+            ))}
+          </div>
         </Form.Item>
-
-        {editData && (
-          <Form.Item label="Status" name="status" valuePropName="checked">
-            <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-          </Form.Item>
-        )}
 
         <button
           type="submit"
-          disabled={isAdding || isUpdating}
-          className=" py-1.5 px-4 mb-2 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-600
-  hover:from-yellow-600 hover:to-yellow-700
-                  text-white font-semibold 
-                  transition disabled:opacity-60"
+          disabled={loading}
+          className="mt-4 py-1.5 px-4 rounded-lg
+          bg-gradient-to-r from-yellow-500 to-yellow-600
+          hover:from-yellow-600 hover:to-yellow-700
+          text-white font-semibold transition disabled:opacity-60"
         >
           <SaveOutlined /> {editData ? "Update Category" : "Add Category"}
         </button>

@@ -35,8 +35,9 @@ export default function Sidebar({
   setSidebarOpen,
 }) {
   const location = useLocation();
-  const navigate = useNavigate();
   const { logout } = useAuth();
+
+  const navigate = useNavigate();
   const [openMenu, setOpenMenu] = React.useState("");
 
   const handleDropdown = (name) => {

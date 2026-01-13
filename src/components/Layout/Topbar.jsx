@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function Topbar({ toggleSidebar, mobileView }) {
   const { user } = useAuth();
-
+  console.log(user)
   return (
     <header
       className="sticky top-0 z-40 flex items-center justify-between
@@ -24,10 +24,10 @@ export default function Topbar({ toggleSidebar, mobileView }) {
         {!mobileView && user && (
           <div className="flex flex-col items-end leading-tight">
             <span className="text-sm font-semibold text-gray-900 truncate max-w-[180px]">
-              {user.name}
+              {user?.email}
             </span>
             <span className="text-xs text-gray-500 uppercase tracking-wide">
-              {user.role}
+              {user?.role}
             </span>
           </div>
         )}

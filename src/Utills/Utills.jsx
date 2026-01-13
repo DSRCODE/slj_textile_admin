@@ -40,3 +40,23 @@ export function toIST(dateInput) {
   return new Intl.DateTimeFormat("en-IN", options).format(date);
 }
 
+
+export const CATEGORY_IMAGES = [
+  {
+    id: 1,
+    url: "https://images.unsplash.com/photo-1521334884684-d80222895322",
+  },
+  {
+    id: 2,
+    url: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f",
+  },
+  {
+    id: 3,
+    url: "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f",
+  },
+  {
+    id: 4,
+    url: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c",
+  },
+];
+

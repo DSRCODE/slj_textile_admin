@@ -1,50 +1,74 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth, db } from "../firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const AuthContext = createContext(null);
 
-const TOKEN_KEY = "health_web_admin";
+const USER_STORAGE_KEY = "app_user";
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(null);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    // ✅ Load user from localStorage initially
+    const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [loading, setLoading] = useState(!user); // loading only if no cached user
 
   useEffect(() => {
-    const storedAuth = localStorage.getItem(TOKEN_KEY);
-    if (storedAuth) {
-      const parsed = JSON.parse(storedAuth);
-      setToken(parsed.token);
-      setUser(parsed.user);
-    }
-    setLoading(false);
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
+        localStorage.removeItem(USER_STORAGE_KEY);
+        setLoading(false);
+        return;
+      }
+
+      // Check if we already have user in localStorage
+      const cachedUser = localStorage.getItem(USER_STORAGE_KEY);
+      if (cachedUser) {
+        setUser(JSON.parse(cachedUser));
+        setLoading(false);
+        return;
+      }
+
+      // Fetch user from Firestore
+      const userRef = doc(db, "users", firebaseUser.uid);
+      let snap = await getDoc(userRef);
+      console.log(snap)
+
+      if (!snap.exists()) {
+        await setDoc(userRef, {
+          email: firebaseUser.email,
+          role: "ADMIN",
+          active: true,
+          createdAt: new Date(),
+        });
+        snap = await getDoc(userRef);
+      }
+
+      const userData = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        role: snap.data().role,
+      };
+
+      setUser(userData);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+      setLoading(false);
+    });
+
+    return () => unsub();
   }, []);
 
-  const login = ({ token, user }) => {
-    const authData = { token, user };
-    localStorage.setItem(TOKEN_KEY, JSON.stringify(authData));
-    setToken(token);
-    setUser(user);
-  };
-
-  const logout = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    setToken(null);
+  const logout = async () => {
+    await signOut(auth);
     setUser(null);
+    localStorage.removeItem(USER_STORAGE_KEY);
   };
-
-  const isAuthenticated = !!token;
 
   return (
-    <AuthContext.Provider
-      value={{
-        token,
-        user,
-        login,
-        logout,
-        isAuthenticated,
-        loading,
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );
