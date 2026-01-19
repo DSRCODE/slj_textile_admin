@@ -8,6 +8,7 @@ import CMSPrivacyEditor from "./components/Editor/Editor";
 import ProductForm from "./pages/products/ProductForm";
 import ProductList from "./pages/products/ProductList";
 import CategoryList from "./pages/categories/CategoryList";
+import EnquiryList from "./pages/Enquiry/EnquiryList";
 
 export default function App() {
   return (
@@ -30,9 +31,10 @@ export default function App() {
           <Route index element={<CategoryList />} />
 
           {/* Other Pages */}
-          <Route path="product_list" element={<ProductList />} />
-          <Route path="create_product" element={<ProductForm />} />
-          <Route path="cms" element={<CMSPrivacyEditor />} />
+          <Route path="/product_list" element={<ProductList />} />
+          <Route path="/create_product" element={<ProductForm />} />
+          <Route path="/enquiry" element={<EnquiryList />} />
+          <Route path="/cms" element={<CMSPrivacyEditor />} />
 
           {/* Fallback */}
           <Route path="*" element={<CategoryList />} />

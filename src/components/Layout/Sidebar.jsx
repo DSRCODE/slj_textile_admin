@@ -21,6 +21,11 @@ const menuItems = [
     ],
   },
   {
+    name: "Enquiry Management",
+    icon: <BsStack />,
+    path: "/enquiry",
+  },
+  {
     name: "CMS Management",
     icon: <MdRestorePage />,
     path: "/cms",
