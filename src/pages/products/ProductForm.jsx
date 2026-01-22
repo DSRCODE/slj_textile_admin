@@ -107,8 +107,14 @@ const ProductForm = ({ editData, onClose }) => {
 
   return (
     <div className=" flex flex-col items-center ">
-      <div className="max-w-6xl p-8 border border-gray-200 rounded-md shadow-lg">
-        <h4 className="py-1 font-medium">{editData ? "Edit Product" : "Add Product"}</h4>
+      <div
+        className={`max-w-6xl ${
+          editData ? " p-2 " : "border p-8 border-gray-200 rounded-md shadow-lg"
+        } `}
+      >
+        <h4 className="py-1 font-medium">
+          {editData ? "Edit Product" : "Add Product"}
+        </h4>
 
         <Form layout="vertical" form={form} onFinish={onFinish}>
           <Form.Item
@@ -170,10 +176,22 @@ const ProductForm = ({ editData, onClose }) => {
           <Form.Item
             label="Price"
             name="price"
-            placeholder="Enter product price"
-            rules={[{ required: true, message: "Price required" }]}
+            rules={[
+              { required: true, message: "Price required" },
+              {
+                pattern: /^[1-9][0-9]*$/,
+                message: "Only positive numbers allowed",
+              },
+            ]}
           >
-            <InputNumber min={0} className="w-full" />
+            <Input
+              placeholder="Enter product price"
+              className="w-full"
+              inputMode="numeric"
+              onChange={(e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, "");
+              }}
+            />
           </Form.Item>
 
           {/* VARIANTS */}
