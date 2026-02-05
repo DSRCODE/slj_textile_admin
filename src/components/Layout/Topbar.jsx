@@ -4,7 +4,6 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function Topbar({ toggleSidebar, mobileView }) {
   const { user } = useAuth();
-  console.log(user)
   return (
     <header
       className="sticky top-0 z-40 flex items-center justify-between

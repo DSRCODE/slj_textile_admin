@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, Switch, Card } from "antd";
-import { SaveOutlined } from "@ant-design/icons";
+import { Form, Input, Switch, Card, Upload, Button } from "antd";
+import { SaveOutlined, UploadOutlined } from "@ant-design/icons";
 import { toast } from "react-toastify";
 import {
   collection,
@@ -9,13 +9,15 @@ import {
   doc,
   serverTimestamp,
 } from "firebase/firestore";
-import { db } from "../../firebase";
-import { CATEGORY_IMAGES } from "../../Utills/Utills";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "../../firebase";
 
 const CategoryForm = ({ editData, onClose }) => {
   const [form] = Form.useForm();
   const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (editData) {
@@ -27,6 +29,37 @@ const CategoryForm = ({ editData, onClose }) => {
     }
   }, [editData]);
 
+  const allowedTypes = "image/jpeg,image/jpg,image/png,image/svg+xml";
+
+  const handleImageChange = ({ fileList }) => {
+    if (fileList.length > 0) {
+      const file = fileList[0].originFileObj;
+      const reader = new FileReader();
+      reader.onload = (e) => setImagePreview(e.target.result);
+      reader.readAsDataURL(file);
+      setSelectedImage(file);
+    } else {
+      setSelectedImage(null);
+      setImagePreview(null);
+    }
+  };
+
+  const uploadImage = async (file) => {
+    if (!file) return null;
+
+    const fileName = `categories/${Date.now()}-${file.name}`;
+    const imageRef = ref(storage, fileName);
+
+    try {
+      setUploading(true);
+      await uploadBytes(imageRef, file);
+      const downloadURL = await getDownloadURL(imageRef);
+      return downloadURL;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const onFinish = async (values) => {
     if (!selectedImage) {
       toast.error("Please select a category image");
@@ -35,6 +68,12 @@ const CategoryForm = ({ editData, onClose }) => {
 
     try {
       setLoading(true);
+
+      let imageUrl = editData?.image;
+
+      if (selectedImage && !editData) {
+        imageUrl = await uploadImage(selectedImage); // Upload new image
+      }
 
       const payload = {
         name: values.name,
@@ -51,6 +90,7 @@ const CategoryForm = ({ editData, onClose }) => {
         toast.success("Category added successfully");
         form.resetFields();
         setSelectedImage(null);
+        setImagePreview(null);
       }
 
       onClose?.();
@@ -78,39 +118,44 @@ const CategoryForm = ({ editData, onClose }) => {
         </Form.Item>
 
         {/* IMAGE SELECTION */}
-        <Form.Item label="Select Category Image" required>
-          <div className="grid grid-cols-4 gap-3">
-            {CATEGORY_IMAGES.map((img) => (
-              <Card
-                key={img.id}
-                hoverable
-                onClick={() => setSelectedImage(img.url)}
-                className={`border-2 ${
-                  selectedImage === img.url
-                    ? "border-yellow-500"
-                    : "border-transparent"
-                }`}
-                bodyStyle={{ padding: 6 }}
-              >
-                <img
-                  src={img.url}
-                  alt="category"
-                  className="h-20 w-full object-cover rounded"
-                />
-              </Card>
-            ))}
-          </div>
+        <Form.Item label="Category Image" required>
+          <Upload
+            accept={allowedTypes}
+            listType="picture-card"
+            fileList={
+              selectedImage
+                ? [{ uid: "-1", name: selectedImage.name, status: "done" }]
+                : []
+            }
+            onChange={handleImageChange}
+            beforeUpload={() => false}
+            maxCount={1}
+            showUploadList={true}
+          >
+            <UploadOutlined /> <span className="ml-1"> Image</span>
+          </Upload>
+          {imagePreview && (
+            <Card className="mt-3" bodyStyle={{ padding: 12 }}>
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="h-32 w-full object-cover rounded"
+              />
+            </Card>
+          )}
         </Form.Item>
 
         <button
           type="submit"
-          disabled={loading}
-          className="mt-4 py-1.5 px-4 rounded-lg
-          bg-gradient-to-r from-yellow-500 to-yellow-600
-          hover:from-yellow-600 hover:to-yellow-700
-          text-white font-semibold transition disabled:opacity-60"
+          disabled={loading || uploading}
+          className="mt-4 py-1.5 px-4 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold transition disabled:opacity-60"
         >
-          <SaveOutlined /> {editData ? "Update Category" : "Add Category"}
+          <SaveOutlined />{" "}
+          {uploading
+            ? "Uploading..."
+            : editData
+            ? "Update Category"
+            : "Add Category"}
         </button>
       </Form>
     </div>

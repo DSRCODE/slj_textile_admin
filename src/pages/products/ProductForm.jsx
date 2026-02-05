@@ -8,14 +8,16 @@ import {
   Card,
   Select,
   Space,
+  Upload,
 } from "antd";
 import {
   SaveOutlined,
   PlusOutlined,
   MinusCircleOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import { toast } from "react-toastify";
-import { db } from "../../firebase";
+import { db, storage } from "../../firebase";
 import {
   collection,
   addDoc,
@@ -24,6 +26,7 @@ import {
   getDocs,
   serverTimestamp,
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { CATEGORY_IMAGES } from "../../Utills/Utills";
 
 const { Option } = Select;
@@ -32,7 +35,9 @@ const ProductForm = ({ editData, onClose }) => {
   const [form] = Form.useForm();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(editData?.image || null);
+  const [selectedImage, setSelectedImage] = useState(null); // File object
+  const [imagePreview, setImagePreview] = useState(null); // Preview URL
+  const [uploading, setUploading] = useState(false);
 
   // ---------------- FETCH CATEGORIES ----------------
   const fetchCategories = async () => {
@@ -60,12 +65,45 @@ const ProductForm = ({ editData, onClose }) => {
         inStock: editData.inStock,
         variants: editData.variants || [],
       });
-      setSelectedImage(editData.image);
+      setSelectedImage(null);
+      setImagePreview(editData.image);
     } else {
       form.resetFields();
       setSelectedImage(null);
+      setImagePreview(null);
     }
   }, [editData]);
+
+  const allowedTypes = "image/jpeg,image/jpg,image/png,image/svg+xml";
+
+  const handleImageChange = ({ fileList }) => {
+    if (fileList.length > 0) {
+      const file = fileList[0].originFileObj;
+      const reader = new FileReader();
+      reader.onload = (e) => setImagePreview(e.target.result);
+      reader.readAsDataURL(file);
+      setSelectedImage(file); // Store File for upload
+    } else {
+      setSelectedImage(null);
+      setImagePreview(editData?.image || null);
+    }
+  };
+
+  const uploadImage = async (file) => {
+    if (!file) return null;
+
+    const fileName = `products/${Date.now()}-${file.name}`; // Unique name [web:20]
+    const imageRef = ref(storage, fileName);
+
+    try {
+      setUploading(true);
+      await uploadBytes(imageRef, file);
+      const downloadURL = await getDownloadURL(imageRef);
+      return downloadURL;
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // ---------------- SAVE PRODUCT ----------------
   const onFinish = async (values) => {
@@ -77,12 +115,18 @@ const ProductForm = ({ editData, onClose }) => {
     try {
       setLoading(true);
 
+      let imageUrl = editData?.image;
+
+      if (selectedImage) {
+        imageUrl = await uploadImage(selectedImage);
+      }
+
       const categoryObj = categories.find((c) => c.id === values.categoryId);
 
       const payload = {
         ...values,
         categoryName: categoryObj?.name || "",
-        image: selectedImage,
+        image: imageUrl,
         createdAt: editData ? editData.createdAt : serverTimestamp(),
       };
 
@@ -94,6 +138,7 @@ const ProductForm = ({ editData, onClose }) => {
         toast.success("Product added successfully");
         form.resetFields();
         setSelectedImage(null);
+        setImagePreview(null);
       }
 
       onClose?.();
@@ -109,7 +154,9 @@ const ProductForm = ({ editData, onClose }) => {
     <div className=" flex flex-col items-center ">
       <div
         className={`max-w-6xl ${
-          editData ? " p-2 " : "border p-8 border-gray-200 rounded-md shadow-lg"
+          editData
+            ? " p-2 "
+            : "border p-8 w-2/4 border-gray-200 rounded-md shadow-lg"
         } `}
       >
         <h4 className="py-1 font-medium">
@@ -149,28 +196,32 @@ const ProductForm = ({ editData, onClose }) => {
           </Form.Item>
 
           {/* IMAGE SELECTION */}
-          <Form.Item label="Select Product Image" required>
-            <div className="grid grid-cols-4 gap-3">
-              {CATEGORY_IMAGES.map((img) => (
-                <Card
-                  key={img.id}
-                  hoverable
-                  onClick={() => setSelectedImage(img.url)}
-                  className={`border-2 ${
-                    selectedImage === img.url
-                      ? "border-yellow-500"
-                      : "border-transparent"
-                  }`}
-                  bodyStyle={{ padding: 6 }}
-                >
-                  <img
-                    src={img.url}
-                    alt="product"
-                    className="h-20 w-full object-cover rounded"
-                  />
-                </Card>
-              ))}
-            </div>
+          <Form.Item label="Product Image" required>
+            <Upload
+              accept={allowedTypes}
+              listType="picture-card"
+              fileList={
+                selectedImage
+                  ? [{ uid: "-1", name: selectedImage.name, status: "done" }]
+                  : []
+              }
+              onChange={handleImageChange}
+              beforeUpload={() => false}
+              maxCount={1}
+              showUploadList={true}
+            >
+              <UploadOutlined />
+              <span className="ml-1">Image</span>
+            </Upload>
+            {imagePreview && (
+              <Card className="mt-3" bodyStyle={{ padding: 12 }}>
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="h-32 w-full object-cover rounded"
+                />
+              </Card>
+            )}
           </Form.Item>
 
           <Form.Item
@@ -249,10 +300,14 @@ const ProductForm = ({ editData, onClose }) => {
             type="primary"
             htmlType="submit"
             icon={<SaveOutlined />}
-            loading={loading}
+            loading={loading || uploading}
             className="mt-4"
           >
-            {editData ? "Update Product" : "Add Product"}
+            {uploading
+              ? "Uploading..."
+              : editData
+              ? "Update Product"
+              : "Add Product"}
           </Button>
         </Form>
       </div>
