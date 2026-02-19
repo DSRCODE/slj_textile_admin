@@ -79,10 +79,13 @@ const ProductForm = ({ editData, onClose }) => {
   const handleImageChange = ({ fileList }) => {
     if (fileList.length > 0) {
       const file = fileList[0].originFileObj;
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target.result);
-      reader.readAsDataURL(file);
-      setSelectedImage(file); // Store File for upload
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => setImagePreview(e.target.result);
+        reader.readAsDataURL(file);
+        setSelectedImage(file);
+      }
     } else {
       setSelectedImage(null);
       setImagePreview(editData?.image || null);
@@ -107,17 +110,19 @@ const ProductForm = ({ editData, onClose }) => {
 
   // ---------------- SAVE PRODUCT ----------------
   const onFinish = async (values) => {
-    if (!selectedImage) {
-      toast.error("Please select a product image");
-      return;
-    }
-
     try {
       setLoading(true);
 
-      let imageUrl = editData?.image;
+      let imageUrl = editData?.image || null;
 
-      if (selectedImage) {
+      // ADD MODE → image required
+      if (!editData && !selectedImage) {
+        toast.error("Please select a product image");
+        return;
+      }
+
+      // If new image selected (File object), upload it
+      if (selectedImage instanceof File) {
         imageUrl = await uploadImage(selectedImage);
       }
 
@@ -128,6 +133,7 @@ const ProductForm = ({ editData, onClose }) => {
         categoryName: categoryObj?.name || "",
         image: imageUrl,
         createdAt: editData ? editData.createdAt : serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
       if (editData) {
@@ -136,6 +142,7 @@ const ProductForm = ({ editData, onClose }) => {
       } else {
         await addDoc(collection(db, "products"), payload);
         toast.success("Product added successfully");
+
         form.resetFields();
         setSelectedImage(null);
         setImagePreview(null);
@@ -202,13 +209,27 @@ const ProductForm = ({ editData, onClose }) => {
               listType="picture-card"
               fileList={
                 selectedImage
-                  ? [{ uid: "-1", name: selectedImage.name, status: "done" }]
+                  ? [
+                      {
+                        uid: "-1",
+                        name: selectedImage.name,
+                        status: "done",
+                      },
+                    ]
+                  : imagePreview
+                  ? [
+                      {
+                        uid: "-1",
+                        name: "product-image",
+                        status: "done",
+                        url: imagePreview,
+                      },
+                    ]
                   : []
               }
               onChange={handleImageChange}
               beforeUpload={() => false}
               maxCount={1}
-              showUploadList={true}
             >
               <UploadOutlined />
               <span className="ml-1">Image</span>

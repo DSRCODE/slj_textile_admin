@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Table, Button, Space, Image, Modal, Spin } from "antd";
-import { EditOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+} from "@ant-design/icons";
 import { toast } from "react-toastify";
 import PageBreadcrumb from "../../components/PageBreadcrumb/PageBreadcrumb";
 
@@ -14,6 +19,9 @@ const ProductList = () => {
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
+
+  const [viewData, setViewData] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   // ---------------- FETCH PRODUCTS ----------------
   const fetchProducts = async () => {
@@ -68,18 +76,27 @@ const ProductList = () => {
       render: (_, record) => (
         <Space>
           <Button
+            icon={<EyeOutlined />}
+            onClick={() => {
+              setViewData(record);
+              setIsViewModalOpen(true);
+            }}
+          />
+
+          <Button
             icon={<EditOutlined />}
             onClick={() => {
               setEditData(record);
               setIsModalOpen(true);
             }}
           />
+
           <Button
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.id)}
             loading={loadingDelete}
-          ></Button>
+          />
         </Space>
       ),
     },
@@ -155,6 +172,67 @@ const ProductList = () => {
             fetchProducts();
           }}
         />
+      </Modal>
+
+      <Modal
+        open={isViewModalOpen}
+        footer={null}
+        onCancel={() => setIsViewModalOpen(false)}
+        width={700}
+      >
+        {viewData && (
+          <div className="space-y-4">
+            {/* Image */}
+            <div className="flex justify-center">
+              <Image width={200} src={viewData.image} alt={viewData.name} />
+            </div>
+
+            {/* Basic Details */}
+            <div>
+              <h2 className="text-xl font-semibold">{viewData.name}</h2>
+              <p className="text-gray-500">Category: {viewData.categoryName}</p>
+            </div>
+
+            {/* Description */}
+            <div>
+              <h4 className="font-medium">Description</h4>
+              <p className="text-gray-600">{viewData.description}</p>
+            </div>
+
+            {/* Price */}
+            <div>
+              <h4 className="font-medium">Price</h4>
+              <p>₹ {viewData.price}</p>
+            </div>
+
+            {/* Variants */}
+            <div>
+              <h4 className="font-medium mb-2">Variants</h4>
+
+              {viewData.variants && viewData.variants.length > 0 ? (
+                <Table
+                  columns={[
+                    { title: "Name", dataIndex: "name" },
+                    { title: "Price", dataIndex: "price" },
+                    { title: "Description", dataIndex: "description" },
+                  ]}
+                  dataSource={viewData.variants}
+                  pagination={false}
+                  rowKey={(v) => v.name + v.price}
+                  size="small"
+                />
+              ) : (
+                <p className="text-gray-500">No variants available</p>
+              )}
+            </div>
+
+            {/* Stock */}
+            {/* <div>
+              <h4 className="font-medium">In Stock</h4>
+              <p>{viewData.inStock ? "Yes" : "No"}</p>
+            </div> */}
+          </div>
+        )}
       </Modal>
     </div>
   );

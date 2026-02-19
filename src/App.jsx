@@ -18,28 +18,18 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Protected Routes */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          {/* ✅ Default Page */}
-          <Route index element={<CategoryList />} />
-
-          {/* Other Pages */}
-          <Route path="/product_list" element={<ProductList />} />
-          <Route path="/create_product" element={<ProductForm />} />
-          <Route path="/enquiry" element={<EnquiryList />} />
-          <Route path="/cms" element={<CMSPrivacyEditor />} />
-
-          {/* Fallback */}
-          <Route path="*" element={<CategoryList />} />
+        {/* Protected Routes Wrapper */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<CategoryList />} />
+            <Route path="product_list" element={<ProductList />} />
+            <Route path="create_product" element={<ProductForm />} />
+            <Route path="enquiry" element={<EnquiryList />} />
+            <Route path="cms" element={<CMSPrivacyEditor />} />
+          </Route>
         </Route>
       </Routes>
     </Router>
   );
 }
+

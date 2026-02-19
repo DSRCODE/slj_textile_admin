@@ -9,6 +9,7 @@ import {
   setDoc,
   query,
   where,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "../../firebase";
 import { toast } from "react-toastify";
@@ -30,27 +31,29 @@ const CMSMultiEditorFirebase = () => {
   const [loading, setLoading] = useState(false);
 
   // ---------------- FETCH CMS ----------------
-  const fetchCMS = async (pageKey) => {
-    try {
-      setLoading(true);
-      const q = query(collection(db, "cms"), where("slug", "==", pageKey));
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        const docData = snap.docs[0];
-        setContent(docData.data().content || "");
-        setContentId(docData.id);
-      } else {
-        // No document exists yet
-        setContent("");
-        setContentId("");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to load CMS content");
-    } finally {
-      setLoading(false);
-    }
-  };
+
+ const fetchCMS = async (pageKey) => {
+   try {
+     setLoading(true);
+
+     const docRef = doc(db, "cms", pageKey);
+     const snap = await getDoc(docRef);
+
+     if (snap.exists()) {
+       setContent(snap.data().content || "");
+       setContentId(pageKey);
+     } else {
+       setContent("");
+       setContentId("");
+     }
+   } catch (err) {
+     console.error(err);
+     toast.error("Failed to load CMS content");
+   } finally {
+     setLoading(false);
+   }
+ };
+
 
   useEffect(() => {
     fetchCMS(selectedPage);
@@ -60,21 +63,18 @@ const CMSMultiEditorFirebase = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
+
       const payload = {
         slug: selectedPage,
         content,
         updatedAt: new Date(),
       };
 
-      if (contentId) {
-        // Update existing document
-        await updateDoc(doc(db, "cms", contentId), payload);
-      } else {
-        // Create new document with slug as id
-        const newDocRef = doc(collection(db, "cms"));
-        await setDoc(newDocRef, payload);
-        setContentId(newDocRef.id);
-      }
+      const docRef = doc(db, "cms", selectedPage);
+
+      await setDoc(docRef, payload, { merge: true });
+
+      setContentId(selectedPage);
 
       toast.success(
         `${pages.find((p) => p.key === selectedPage)?.label} saved successfully`
@@ -86,6 +86,7 @@ const CMSMultiEditorFirebase = () => {
       setLoading(false);
     }
   };
+
 
   const joditConfig = {
     readonly: false,

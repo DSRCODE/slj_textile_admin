@@ -25,6 +25,7 @@ const CategoryForm = ({ editData, onClose }) => {
         name: editData.name,
         status: editData.status,
       });
+      setImagePreview(editData.image);
       setSelectedImage(editData.image);
     }
   }, [editData]);
@@ -60,47 +61,50 @@ const CategoryForm = ({ editData, onClose }) => {
     }
   };
 
-  const onFinish = async (values) => {
-    if (!selectedImage) {
-      toast.error("Please select a category image");
-      return;
+const onFinish = async (values) => {
+  if (!selectedImage && !editData?.image) {
+    toast.error("Please select a category image");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    let imageUrl = editData?.image || null;
+
+    // If new image selected (File object), upload it
+    if (selectedImage instanceof File) {
+      imageUrl = await uploadImage(selectedImage);
     }
 
-    try {
-      setLoading(true);
+    const payload = {
+      name: values.name,
+      image: imageUrl, // ✅ Save URL not File
+      status: values.status ?? true,
+      ...(editData ? {} : { createdAt: serverTimestamp() }),
+      updatedAt: serverTimestamp(),
+    };
 
-      let imageUrl = editData?.image;
-
-      if (selectedImage && !editData) {
-        imageUrl = await uploadImage(selectedImage); // Upload new image
-      }
-
-      const payload = {
-        name: values.name,
-        image: selectedImage,
-        status: true,
-        ...(editData ? {} : { createdAt: serverTimestamp() }),
-      };
-
-      if (editData) {
-        await updateDoc(doc(db, "categories", editData.id), payload);
-        toast.success("Category updated successfully");
-      } else {
-        await addDoc(collection(db, "categories"), payload);
-        toast.success("Category added successfully");
-        form.resetFields();
-        setSelectedImage(null);
-        setImagePreview(null);
-      }
-
-      onClose?.();
-    } catch (err) {
-      console.error(err);
-      toast.error("Operation failed");
-    } finally {
-      setLoading(false);
+    if (editData) {
+      await updateDoc(doc(db, "categories", editData.id), payload);
+      toast.success("Category updated successfully");
+    } else {
+      await addDoc(collection(db, "categories"), payload);
+      toast.success("Category added successfully");
+      form.resetFields();
+      setSelectedImage(null);
+      setImagePreview(null);
     }
-  };
+
+    onClose?.();
+  } catch (err) {
+    console.error(err);
+    toast.error("Operation failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div>
